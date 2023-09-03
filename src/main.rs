@@ -7,15 +7,15 @@ use ::config::Config;
 use config::default_config::ServerConfig;
 use dotenv::dotenv;
 use actix_web_validator::JsonConfig;
-use actix_web::{web, App, HttpServer, HttpResponse, error};
+use actix_web::{web, App, HttpServer};
 use tokio_postgres::NoTls;
-use serde_json::json;
 
 use handlers::users::{add_user, get_users};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
+    env_logger::init();
 
     let config_ = Config::builder()
         .add_source(::config::Environment::default())
@@ -28,8 +28,7 @@ async fn main() -> std::io::Result<()> {
 
     let json_config = JsonConfig::default().limit(4096)
         .error_handler(|err, _req| {
-            println!("{}", err);
-            error::InternalError::from_response(err, HttpResponse::InternalServerError().json(json!({"error": "something went wrong!"}))).into()
+            config::errors::CustomError::InternalServerError(err.to_string()).into()
         });
 
     let server = HttpServer::new(move || {

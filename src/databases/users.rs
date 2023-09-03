@@ -19,8 +19,12 @@ pub async fn get_users(client: &Client) -> Result<Vec<User>, CustomError> {
 pub async fn add_user(client: &Client, user_data: AddUser) -> Result<Vec<User>, CustomError> {
     let stmt = "INSERT INTO users (email, name, updated_at) VALUES ($1, $2, $3) RETURNING *";
     let stmt = client.prepare(&stmt).await.unwrap();
-    let updated_at = NaiveDateTime::parse_from_str(&user_data.updated_at, "%Y-%m-%dT%H:%M:%S%.fZ")
-    .expect("Failed to parse ISO string");
+    let updated_at = match NaiveDateTime::parse_from_str(&user_data.updated_at, "%Y-%m-%dT%H:%M:%S%.fZ") {
+        Ok(datetime) => datetime,
+        Err(error) => {
+          return Err(CustomError::InternalServerError(error.to_string()))
+        }
+    };
 
     let results = client
         .query(&stmt, &[
